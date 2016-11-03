@@ -32,7 +32,9 @@ public class IndexBatchBolt<T> extends AbstractIndexBatchBolt {
 
     public static final long DEFAULT_EMIT_FREQUENCY = 10;
 
-    private static final int QUEUE_MAX_SIZE = 100;
+    private static final int QUEUE_MAX_SIZE = 1000;
+
+    private int batchSize = QUEUE_MAX_SIZE;
 
     private OutputCollector outputCollector;
 
@@ -52,7 +54,7 @@ public class IndexBatchBolt<T> extends AbstractIndexBatchBolt {
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         this.outputCollector = collector;
         this.client = clientFactory.makeClient(stormConf);
-        this.queue = new LinkedBlockingQueue<Tuple>(QUEUE_MAX_SIZE);
+        this.queue = new LinkedBlockingQueue<Tuple>(batchSize);
     }
 
     @Override
@@ -88,7 +90,7 @@ public class IndexBatchBolt<T> extends AbstractIndexBatchBolt {
         for (Tuple input : inputs) {
             Document<T> doc = mapper.map(input);
             IndexRequestBuilder request =
-                    client.prepareIndex(doc.getName(), doc.getType(), doc.getId()).setSource((Map)doc.getSource());
+                    client.prepareIndex(doc.getName(), doc.getType(), doc.getId()).setSource((Map) doc.getSource());
             if (doc.getParentId() != null) {
                 request.setParent(doc.getParentId());
             }
@@ -149,5 +151,13 @@ public class IndexBatchBolt<T> extends AbstractIndexBatchBolt {
     public void setMapper(TupleMapper<Document<T>> mapper) {
         this.mapper = mapper;
     }
-    
+
+    public int getBatchSize() {
+        return batchSize;
+    }
+
+    public void setBatchSize(int batchSize) {
+        this.batchSize = batchSize;
+    }
+
 }
